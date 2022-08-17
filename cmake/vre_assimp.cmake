@@ -1,0 +1,83 @@
+
+# downloads and build the open asset importer assimp
+function(vre_assimp_get_assimp destination_folder lib_main lib_zlib lib_irrxml)
+	set(VRE_ASSIMP_DESTINATION_FOLDER "${VRE_DEPENDENCIES}/assimp")
+	set(VRE_ASSIMP_GIT_REPO https://github.com/assimp/assimp.git)
+	if(NOT EXISTS ${VRE_ASSIMP_DESTINATION_FOLDER})
+		find_package(Git)
+		if(Git_FOUND)
+			vre_msg_info("Git executable found: ${GIT_EXECUTABLE}")
+			vre_msg_info("Cloning assimp into: ${VRE_ASSIMP_DESTINATION_FOLDER}")
+			execute_process(COMMAND ${GIT_EXECUTABLE} clone --depth 1 --branch "v5.0.1" ${VRE_ASSIMP_GIT_REPO} ${VRE_ASSIMP_DESTINATION_FOLDER} RESULT_VARIABLE rv)
+		else(Git_FOUND)
+			vre_msg_error("Git was not found by CMake! Maybe you have to install git?")
+		endif(Git_FOUND)
+	else()
+		vre_msg_info("Skipped downloading assimp.")
+	endif()
+
+	if(EXISTS "${VRE_ASSIMP_DESTINATION_FOLDER}")
+		# build assimp
+		if(${VRE_DEBUG})
+			#skip building if binaries exist
+			if(NOT(EXISTS "${VRE_ASSIMP_DESTINATION_FOLDER}/lib/Debug/assimp-vc142-mtd.lib" OR EXISTS "${VRE_ASSIMP_DESTINATION_FOLDER}/lib/assimp-vc142-mtd.lib"))
+				vre_msg_info("Building assimp in debug mode ...")
+				execute_process(COMMAND ${CMAKE_COMMAND} -DBUILD_SHARED_LIBS=OFF -S ${VRE_ASSIMP_DESTINATION_FOLDER} -B ${VRE_ASSIMP_DESTINATION_FOLDER})
+				execute_process(COMMAND ${CMAKE_COMMAND}  --build "${VRE_ASSIMP_DESTINATION_FOLDER}" --config debug -v )
+			else()
+				vre_msg_info("Skipped building assimp in debug mode because the binaries already exist.")
+			endif()
+		else()
+			if(NOT(EXISTS "${VRE_ASSIMP_DESTINATION_FOLDER}/lib/Rlease/assimp-vc142-mt.lib" OR EXISTS "${VRE_ASSIMP_DESTINATION_FOLDER}/lib/assimp-vc142-mt.lib"))
+				vre_msg_info("Building assimp in release mode ...")
+				execute_process(COMMAND ${CMAKE_COMMAND} -DBUILD_SHARED_LIBS=OFF -S ${VRE_ASSIMP_DESTINATION_FOLDER} -B ${VRE_ASSIMP_DESTINATION_FOLDER})
+				execute_process(COMMAND ${CMAKE_COMMAND}  --build "${VRE_ASSIMP_DESTINATION_FOLDER}" --config release -v)
+			else()
+				vre_msg_info("Skipped building assimp in release mode because the binaries already exist.")
+			endif()
+		endif()
+	endif()
+
+	# visual studio creates Debug/Release folders
+	set(VRE_COMPILER_OUTPUT_PREFIX "")
+	if(EXISTS "${VRE_ASSIMP_DESTINATION_FOLDER}/lib/Debug/assimp-vc142-mtd.lib" OR EXISTS "${VRE_ASSIMP_DESTINATION_FOLDER}/lib/Release/assimp-vc142-mt.lib")
+		if(${VRE_DEBUG})
+			set(VRE_COMPILER_OUTPUT_PREFIX "Debug/")
+		else()
+			set(VRE_COMPILER_OUTPUT_PREFIX "Release/")
+		endif()
+	endif()
+
+	# determine the correct lib files on windows
+	if(WIN32)
+		if(${VRE_DEBUG})
+			# debug libraries
+			set(VRE_ASSIMP_FILE_MAIN "assimp-vc142-mtd.lib")
+			set(VRE_ASSIMP_FILE_ZLIB "zlibstaticd.lib")
+			set(VRE_ASSIMP_FILE_IRRXML "IrrXMLd.lib")
+		else()
+			# release libraries
+			set(VRE_ASSIMP_FILE_MAIN "assimp-vc142-mt.lib")
+			set(VRE_ASSIMP_FILE_ZLIB "zlibstatic.lib")
+			set(VRE_ASSIMP_FILE_IRRXML "IrrXML.lib")
+		endif()
+	else()
+		# UNIX has uses the same libraries for both configs
+		set(VRE_ASSIMP_FILE_MAIN "libassimp.a")
+		set(VRE_ASSIMP_FILE_ZLIB "libzlibstatic.a")
+		set(VRE_ASSIMP_FILE_IRRXML "libIrrXML.a")
+	endif()
+
+	set("${lib_main}" "${VRE_ASSIMP_DESTINATION_FOLDER}/lib/${VRE_COMPILER_OUTPUT_PREFIX}${VRE_ASSIMP_FILE_MAIN}" PARENT_SCOPE)
+	set("${lib_zlib}" "${VRE_ASSIMP_DESTINATION_FOLDER}/lib/${VRE_COMPILER_OUTPUT_PREFIX}${VRE_ASSIMP_FILE_ZLIB}" PARENT_SCOPE)
+	set("${lib_irrxml}" "${VRE_ASSIMP_DESTINATION_FOLDER}/lib/${VRE_COMPILER_OUTPUT_PREFIX}${VRE_ASSIMP_FILE_IRRXML}" PARENT_SCOPE)
+	set("${destination_folder}" "${VRE_ASSIMP_DESTINATION_FOLDER}" PARENT_SCOPE)
+
+	# in UNIX assimp will not build zlib if it detects a zlib version is already installed
+	if(UNIX)
+		if(NOT EXISTS "${VRE_ASSIMP_DESTINATION_FOLDER}/lib/libzlibstatic.a")
+			vre_msg_info("Linking zlib via -lz instead of the assimp version")
+			set("${lib_zlib}" "-lz" PARENT_SCOPE)
+		endif()
+	endif()
+endfunction()

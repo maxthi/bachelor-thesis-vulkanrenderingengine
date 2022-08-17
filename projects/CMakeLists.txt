@@ -1,0 +1,7 @@
+add_subdirectory("phong_shading")
+add_subdirectory("gui_example")
+add_subdirectory("gui_rotation")
+add_subdirectory("project_template")
+add_subdirectory("transparent_objects")
+add_subdirectory("render_target_example")
+add_subdirectory("artr_exercise")
