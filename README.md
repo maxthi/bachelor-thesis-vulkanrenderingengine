@@ -1,6 +1,7 @@
 A project I did during 2019/20.
 
 # Disclaimer
+This was the first time I came into contact with Vulkan. In hindsight, I would do things a bit different.
 Compilation might need a bit of configuration beforehand.
 
 # Possible errors
